@@ -54,6 +54,10 @@
     <Reference Include="Owin, Version=1.0.0.0, Culture=neutral, PublicKeyToken=f0ebd12fd5e55cc5, processorArchitecture=MSIL">
       <HintPath>..\packages\Owin.1.0\lib\net40\Owin.dll</HintPath>
     </Reference>
+    <Reference Include="Sitecore.Client, Version=10.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\packages\Sitecore.Client.NoReferences.8.2.170728\lib\NET452\Sitecore.Client.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
     <Reference Include="Sitecore.Kernel, Version=10.0.0.0, Culture=neutral, processorArchitecture=MSIL">
       <HintPath>..\packages\Sitecore.Kernel.NoReferences.8.2.170728\lib\NET452\Sitecore.Kernel.dll</HintPath>
       <Private>False</Private>
@@ -95,9 +99,12 @@
     <Compile Include="LoggedInNotifier.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="NotificationStartupProcessor.cs" />
+    <Compile Include="RenderContentEditorNotification.cs" />
   </ItemGroup>
   <ItemGroup>
-    <Content Include="App_Config\Include\Notifications\Westco.SignalR.config" />
+    <Content Include="App_Config\Include\Notifications\Westco.SignalR.config">
+      <SubType>Designer</SubType>
+    </Content>
     <None Include="packages.config" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

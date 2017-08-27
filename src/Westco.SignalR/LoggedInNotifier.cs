@@ -1,5 +1,7 @@
 ﻿using Microsoft.AspNet.SignalR;
 using Sitecore.Pipelines.LoggedIn;
+using Sitecore.Resources;
+using Sitecore.Web.UI;
 
 namespace Westco.SignalR
 {
@@ -12,7 +14,7 @@ namespace Westco.SignalR
                 {
                     title = "User LoggedIn",
                     body = $"Username: {args.Username}",
-                    icon = "http://sc82u5.local/temp/iconcache/Office/32x32/fire.png"
+                    icon = Images.GetThemedImageSource("Office/32x32/fire.png", ImageDimension.id32x32) //"http://sc82u5.local/temp/iconcache/Office/32x32/fire.png"
                 }
                 );
 
