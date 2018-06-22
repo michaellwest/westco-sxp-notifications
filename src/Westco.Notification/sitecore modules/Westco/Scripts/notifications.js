@@ -75,7 +75,8 @@
                     //Message data handler.
                     webSocket.onmessage = function (e) {
                         const message = JSON.parse(e.data);
-                        console.log(`[Westco] ${message}`);
+                        console.log("[Westco] Rendering notification.");
+                        console.log(message);
                         registration.showNotification(message.title, message.options);
                     };
 
