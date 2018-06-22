@@ -13,17 +13,17 @@ namespace Westco.Notification.sitecore_modules.Westco.Services
 {
     public class WebSocketHandler : IHttpHandler
     {
-        private static bool IsInitialized = false;
+        private static bool _isInitialized;
         private static readonly ConcurrentDictionary<string, WebSocket> Sockets = new ConcurrentDictionary<string, WebSocket>();
         private static readonly ConcurrentDictionary<string, string> SubscribedUsers = new ConcurrentDictionary<string, string>();
 
         public WebSocketHandler()
         {
-            if (!IsInitialized)
+            if (!_isInitialized)
             {
                 SubscribeUser();
                 NotifyUser();
-                IsInitialized = true;
+                _isInitialized = true;
             }
         }
 
@@ -66,7 +66,6 @@ namespace Westco.Notification.sitecore_modules.Westco.Services
                     var dataString = JsonConvert.SerializeObject(message.Payload, serializerSettings);
                     var bytes = System.Text.Encoding.UTF8.GetBytes(dataString);
 
-                    //Sends data back.
                     socket.SendAsync(new ArraySegment<byte>(bytes), WebSocketMessageType.Text, true, cancellationToken);
                 }
             });
@@ -89,27 +88,17 @@ namespace Westco.Notification.sitecore_modules.Westco.Services
         //Asynchronous request handler.
         public async Task WebSocketRequestHandler(AspNetWebSocketContext webSocketContext)
         {
-            //Gets the current WebSocket object.
             var webSocket = webSocketContext.WebSocket;
-
-            /*We define a certain constant which will represent
-            size of received data. It is established by us and 
-            we can set any value. We know that in this case the size of the sent
-            data is very small.
-            */
             const int maxMessageSize = 1024;
 
-            //Buffer for received bits.
             var receivedDataBuffer = new ArraySegment<byte>(new byte[maxMessageSize]);
 
             var cancellationToken = new CancellationToken();
-            var socketId = Guid.Empty;
             var sessionId = "";
 
             //Checks WebSocket state.
             while (webSocket.State == WebSocketState.Open)
             {
-                //Reads data.
                 var webSocketReceiveResult =
                   await webSocket.ReceiveAsync(receivedDataBuffer, cancellationToken);
 
@@ -121,43 +110,18 @@ namespace Westco.Notification.sitecore_modules.Westco.Services
                 }
                 else
                 {
-                    /*
-                    var payloadData = receivedDataBuffer.Array.Where(b => b != 0).ToArray();
-
-                    //Because we know that is a string, we convert it.
-                    var receiveString = System.Text.Encoding.UTF8.GetString(payloadData, 0, payloadData.Length);
-                    */
                     sessionId = webSocketContext.CookieCollection["ASP.NET_SessionId"]?.Value;
                     if (!string.IsNullOrEmpty(sessionId))
                     {
-                        Sockets.TryAdd(sessionId, webSocket);
-                        
-                        /*
-                        //Converts string to byte array.
-                        var newString = $"Registered at {DateTime.Now}";
-                        var bytes = System.Text.Encoding.UTF8.GetBytes(newString);
-
-                        //Sends data back.
-                        await webSocket.SendAsync(new ArraySegment<byte>(bytes),
-                            WebSocketMessageType.Text, true, cancellationToken);
-                        */
-                    }
-                    else
-                    {
-                        /*
-                        //Converts string to byte array.
-                        var newString = $"Hello, {receiveString}! Time {DateTime.Now}";
-                        var bytes = System.Text.Encoding.UTF8.GetBytes(newString);
-
-                        //Sends data back.
-                        await webSocket.SendAsync(new ArraySegment<byte>(bytes),
-                            WebSocketMessageType.Text, true, cancellationToken);
-                        */
+                        Sockets.TryAdd(sessionId, webSocket);                 
                     }
                 }
             }
 
-            Sockets.TryRemove(sessionId, out _);
+            if (!string.IsNullOrEmpty(sessionId))
+            {
+                Sockets.TryRemove(sessionId, out _);
+            }
         }
     }
 }
