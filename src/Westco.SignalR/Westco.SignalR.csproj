@@ -98,11 +98,11 @@
     <Compile Include="IgnoreCustomPrefixes.cs" />
     <Compile Include="LoggedInNotifier.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="NotificationStartupProcessor.cs" />
+    <Compile Include="Startup.cs" />
     <Compile Include="RenderContentEditorNotification.cs" />
   </ItemGroup>
   <ItemGroup>
-    <Content Include="App_Config\Include\Notifications\Westco.SignalR.config">
+    <Content Include="App_Config\Include\Westco\Westco.SignalR.config">
       <SubType>Designer</SubType>
     </Content>
     <None Include="packages.config" />
