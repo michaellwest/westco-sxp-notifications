@@ -3,10 +3,11 @@ using System.Web;
 using System.Web.UI;
 using Sitecore.Diagnostics;
 using Sitecore.Shell.Applications.ContentEditor.Pipelines.RenderContentEditor;
+using Page = Sitecore.Web.UI.HtmlControls.Page;
 
-namespace Westco.SignalR
+namespace Westco.Notification.Pipelines
 {
-    public class RenderContentEditorNotification
+    public class InsertCustomContentEditorResource
     {
         private readonly IList<string> _scripts = new List<string>();
         private readonly IList<string> _styles = new List<string>();
