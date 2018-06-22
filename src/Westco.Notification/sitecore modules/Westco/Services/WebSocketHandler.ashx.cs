@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Concurrent;
-using System.Linq;
 using System.Net.WebSockets;
 using System.Threading;
 using System.Threading.Tasks;
@@ -19,12 +18,11 @@ namespace Westco.Notification.sitecore_modules.Westco.Services
 
         public WebSocketHandler()
         {
-            if (!_isInitialized)
-            {
-                SubscribeUser();
-                NotifyUser();
-                _isInitialized = true;
-            }
+            if (_isInitialized) return;
+
+            SubscribeUser();
+            NotifyUser();
+            _isInitialized = true;
         }
 
         public void SubscribeUser()
