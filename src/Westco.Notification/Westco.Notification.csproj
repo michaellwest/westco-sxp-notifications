@@ -67,8 +67,9 @@
   <ItemGroup>
     <Compile Include="Pipelines\InsertCustomPageExtenderResource.cs" />
     <Compile Include="Pipelines\InsertCustomSpeakResource.cs" />
+    <Compile Include="Pipelines\LogoutSubscription.cs" />
     <Compile Include="SubscriptionEventArgs.cs" />
-    <Compile Include="Pipelines\LoggedInSubscription.cs" />
+    <Compile Include="Pipelines\LoggingInSubscription.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Pipelines\InsertCustomContentEditorResource.cs" />
     <Compile Include="sitecore modules\Westco\Services\WebSocketHandler.ashx.cs">

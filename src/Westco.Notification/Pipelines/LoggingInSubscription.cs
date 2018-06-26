@@ -1,15 +1,14 @@
-﻿using Sitecore.Pipelines.LoggedIn;
+﻿using Sitecore.Pipelines.LoggingIn;
 
 namespace Westco.Notification.Pipelines
 {
-    public class LoggedInSubscription
+    public class LoggingInSubscription
     {
-        public void Process(LoggedInArgs args)
+        public void Process(LoggingInArgs args)
         {
             var data = new SubscriptionEventArgs()
             {
-                Username = args.Username,
-                SessionId = args.Context.Session.SessionID
+                Username = args.Username
             };
 
             Sitecore.Events.Event.RaiseEvent("westcosocket:subscribe", data);

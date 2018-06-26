@@ -3,7 +3,6 @@
         return navigator.serviceWorker.register("/sitecore modules/westco/scripts/service-worker.js")
             .then(function (registration) {
                 console.log("[Westco] Service worker successfully registered.");
-                registration.update();
                 return registration;
             })
             .catch(function (err) {
@@ -78,6 +77,7 @@
                         console.log("[Westco] Rendering notification.");
                         console.log(message);
                         registration.showNotification(message.title, message.options);
+                        return false;
                     };
 
                     //Close event handler.
@@ -90,8 +90,12 @@
                         console.log(`[Westco] ${e.message}`);
                     }
 
-                    if (webSocket.OPEN && webSocket.readyState === 1)
+                    if (webSocket.OPEN && webSocket.readyState === 1) {
+                        console.log("[Westco] WebSocket is open.");
                         webSocket.send(clientId);
+                    } else {
+                        console.log(`[Westco] Readstate = ${webSocket.readyState}`);
+                    }
 
                     console.log("[Westco] Completing registration.");
                 });

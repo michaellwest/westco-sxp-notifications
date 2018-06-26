@@ -1,7 +1,7 @@
 ﻿self.addEventListener('notificationclick', function (event) {
     if (!event.action) {
         // Was a normal notification click
-        console.log('Notification Click.');
+        console.log("Notification Click.");
         return;
     }
 

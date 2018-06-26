@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Concurrent;
+using System.Linq;
 using System.Net.WebSockets;
 using System.Threading;
 using System.Threading.Tasks;
@@ -7,14 +8,20 @@ using System.Web;
 using System.Web.WebSockets;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Serialization;
+using Sitecore.Web.Authentication;
 
 namespace Westco.Notification.sitecore_modules.Westco.Services
 {
+    public class QueuedMessage
+    {
+        public string Username { get; set; }
+        public byte[] Data { get; set; }
+    }
     public class WebSocketHandler : IHttpHandler
     {
         private static bool _isInitialized;
-        private static readonly ConcurrentDictionary<string, WebSocket> Sockets = new ConcurrentDictionary<string, WebSocket>();
-        private static readonly ConcurrentDictionary<string, string> SubscribedUsers = new ConcurrentDictionary<string, string>();
+        private static readonly ConcurrentDictionary<string, WebSocket> Subscriptions = new ConcurrentDictionary<string, WebSocket>();
+        private static readonly ConcurrentBag<QueuedMessage> Messages = new ConcurrentBag<QueuedMessage>();
 
         public WebSocketHandler()
         {
@@ -22,7 +29,27 @@ namespace Westco.Notification.sitecore_modules.Westco.Services
 
             SubscribeUser();
             NotifyUser();
+            UnsubscribeUser();
             _isInitialized = true;
+        }
+
+        private static async Task ProcessMessages()
+        {
+            await Task.Delay(1000);
+            var localMessages = Messages;
+            foreach (var localMessage in localMessages)
+            {
+                var username = localMessage.Username;
+                if (!Subscriptions.ContainsKey(username) || Subscriptions[username] == null) continue;
+
+                if (!Messages.TryTake(out var message)) continue;
+
+                var socket = Subscriptions[username];
+                var cancellationToken = new CancellationToken();
+                var bytes = message.Data;
+                await socket.SendAsync(new ArraySegment<byte>(bytes), WebSocketMessageType.Text, true,
+                    cancellationToken);
+            }
         }
 
         public void SubscribeUser()
@@ -31,11 +58,25 @@ namespace Westco.Notification.sitecore_modules.Westco.Services
             {
                 if (Sitecore.Events.Event.ExtractParameter(args, 0) is SubscriptionEventArgs subscriptionEventArgs)
                 {
-                    SubscribedUsers.TryAdd(subscriptionEventArgs.SessionId, subscriptionEventArgs.Username);
+                    Subscriptions.TryAdd(subscriptionEventArgs.Username, null);
                 }
             });
 
             Sitecore.Events.Event.Subscribe("westcosocket:subscribe", handler);
+        }
+
+        public void UnsubscribeUser()
+        {
+            var handler = new EventHandler((sender, args) =>
+            {
+                if (Sitecore.Events.Event.ExtractParameter(args, 0) is SubscriptionEventArgs subscriptionEventArgs)
+                {
+                    Subscriptions.TryRemove(subscriptionEventArgs.Username, out _);
+                    //TODO: Should remove old messages?
+                }
+            });
+
+            Sitecore.Events.Event.Subscribe("westcosocket:unsubscribe", handler);
         }
 
         public void NotifyUser()
@@ -45,7 +86,7 @@ namespace Westco.Notification.sitecore_modules.Westco.Services
                 var message = Sitecore.Events.Event.ExtractParameter(args, 0) as dynamic;
 
                 var canBroadcast = message.CanBroadcast;
-                var targetSessionId = message.SessionId;
+                var targetUsername = message.Username;
 
                 var serializerSettings = new JsonSerializerSettings
                 {
@@ -53,18 +94,30 @@ namespace Westco.Notification.sitecore_modules.Westco.Services
                     NullValueHandling = NullValueHandling.Ignore
                 };
 
-                foreach (var sessionId in Sockets.Keys)
+                foreach (var username in Subscriptions.Keys)
                 {
-                    if(!canBroadcast && targetSessionId != sessionId) continue;
+                    if (!canBroadcast && targetUsername != username) continue;
 
                     var cancellationToken = new CancellationToken();
 
-                    var socket = Sockets[sessionId];
+                    var socket = Subscriptions[username];
 
                     var dataString = JsonConvert.SerializeObject(message.Payload, serializerSettings);
                     var bytes = System.Text.Encoding.UTF8.GetBytes(dataString);
 
-                    socket.SendAsync(new ArraySegment<byte>(bytes), WebSocketMessageType.Text, true, cancellationToken);
+                    if (socket != null)
+                    {
+                        socket.SendAsync(new ArraySegment<byte>(bytes), WebSocketMessageType.Text, true,
+                           cancellationToken);
+                    }
+                    else
+                    {
+                        Messages.Add(new QueuedMessage()
+                        {
+                            Username = username,
+                            Data = bytes
+                        });
+                    }
                 }
             });
 
@@ -92,33 +145,41 @@ namespace Westco.Notification.sitecore_modules.Westco.Services
             var receivedDataBuffer = new ArraySegment<byte>(new byte[maxMessageSize]);
 
             var cancellationToken = new CancellationToken();
-            var sessionId = "";
 
             //Checks WebSocket state.
             while (webSocket.State == WebSocketState.Open)
             {
+                var username = "";
+                var sessionId = webSocketContext.CookieCollection["ASP.NET_SessionId"]?.Value;
+                if (!string.IsNullOrEmpty(sessionId))
+                {
+                    var session = DomainAccessGuard.Sessions.FirstOrDefault(s => s.SessionID == sessionId);
+                    if (session != null)
+                    {
+                        username = session.UserName;
+                        Subscriptions[username] = webSocket;
+                        await ProcessMessages();
+                    }
+                }
+
                 var webSocketReceiveResult =
                   await webSocket.ReceiveAsync(receivedDataBuffer, cancellationToken);
 
                 //If input frame is cancelation frame, send close command.
                 if (webSocketReceiveResult.MessageType == WebSocketMessageType.Close)
                 {
+                    if (!string.IsNullOrEmpty(username))
+                    {
+                        Subscriptions[username] = null;
+                    }
+
                     await webSocket.CloseAsync(WebSocketCloseStatus.NormalClosure,
                       string.Empty, cancellationToken);
                 }
                 else
                 {
-                    sessionId = webSocketContext.CookieCollection["ASP.NET_SessionId"]?.Value;
-                    if (!string.IsNullOrEmpty(sessionId))
-                    {
-                        Sockets.TryAdd(sessionId, webSocket);                 
-                    }
+                    await ProcessMessages();
                 }
-            }
-
-            if (!string.IsNullOrEmpty(sessionId))
-            {
-                Sockets.TryRemove(sessionId, out _);
             }
         }
     }
